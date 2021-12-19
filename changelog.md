@@ -3,6 +3,10 @@
 
 ## Factorio version 1.1
 
+### 0.0.7 (???)
+Features:
+* Added czech locale
+
 ### 0.0.6 (2020-12-28)
 Features:
 * Added russian locale (via a [pull request](https://github.com/kajacx/CopyPasteModules/pull/2) from [EldrinnElantey](https://github.com/Eldrinn-Elantey))
