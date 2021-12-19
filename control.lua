@@ -33,6 +33,7 @@ script.on_event({defines.events.on_entity_settings_pasted},
         })
         for _,request in pairs(targetRequests) do
             if request.proxy_target == target then
+                -- TODO: remove only requests with modules
                 request.destroy()
             end
         end
@@ -69,7 +70,6 @@ script.on_event({defines.events.on_entity_settings_pasted},
                 end
                 if moved < -count then
                     player.print({"message.kajacx_copy-paste-modules_no-inventory-space", game.item_prototypes[name].localised_name})
-                    -- TODO: localized message
                 end
             end
         end

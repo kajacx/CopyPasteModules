@@ -1,4 +1,4 @@
---- CoPIED FROM THE COPY AND PASTE MODULES 0.15 MOD ---
+--- COPIED FROM THE COPY AND PASTE MODULES 0.15 MOD ---
 
 -- Makes all entities of this given type copy-and-pastable.
 local function make_entity_type_pastable(entity_type)
@@ -25,4 +25,3 @@ end
 make_entity_type_pastable("furnace")
 make_entity_type_pastable("lab")
 make_entity_type_pastable("beacon")
---make_entity_type_pastable("mining-drill") already copiable in 0.17
