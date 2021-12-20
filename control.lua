@@ -1,8 +1,8 @@
 --- EVENTS ---
 
 script.on_event({defines.events.on_entity_settings_pasted},
-    function(e)
-        local player = game.players[e.player_index]
+    function(event)
+        local player = game.players[event.player_index]
         local playerInventory = player.get_main_inventory()
         
         -- check if functionality is enabled
@@ -10,8 +10,8 @@ script.on_event({defines.events.on_entity_settings_pasted},
             return -- do nothing
         end
     
-        local source = e.source
-        local target = e.destination
+        local source = event.source
+        local target = event.destination
         if not source or not target then
             return
         end
@@ -35,36 +35,57 @@ script.on_event({defines.events.on_entity_settings_pasted},
             end
         end
         
-        -- first, prepare the "diff", positive number indicates direction from player to target
+        -- prepare the "diff" for message display, positive number indicates direction from player to target
         local diff = {}
+
+        -- keep modules from target machine in a variable for now, give them to player (or dump them on the ground) at the end
+        local modulesToGive = targetInventory.get_contents()
+        -- and clear target inventory
+        targetInventory.clear()
         
-        -- then, remove all modules from the machine, so they can be inserted later in the same order
-        for name,count in pairs(targetInventory.get_contents()) do
-            local moved = playerInventory.insert({name = name, count = count}) -- first insert items to player in case their inventory is full
-            if moved > 0 then
-                targetInventory.remove({name = name, count = moved}) -- target will always be able to remove the items
-                diff[name] = -moved;
-            end
-            if moved < count then
-                player.print({"message.kajacx_copy-paste-modules_no-inventory-space", game.item_prototypes[name].localised_name})
-                -- TODO: dump items on the ground?
-            end
-        end
-        
-        -- next, insert modules from player to target
+        -- insert modules from previous modules or the player to target machine
         local missing = {}
         for i=1,math.min(#targetInventory, #sourceInventory),1 do
             local currentItem = sourceInventory[i];
-            if currentItem.valid_for_read then
-                -- item present: try to insert it
-                local taken = playerInventory.remove({name = currentItem.name, count = 1}) -- take item from player
-                if (taken > 0) then
-                    -- player has item: insert it into the target machine
-                    targetInventory.insert({name = currentItem.name, count = 1})
-                    diff[currentItem.name] = (diff[currentItem.name] or 0) + 1
-                else
-                    -- player doesn't have item: save that info for creating logistic request later
-                    missing[currentItem.name] = (missing[currentItem.name] or 0) + 1
+            if currentItem.valid_for_read then -- item present
+                local name = currentItem.name
+                local moduleTaken = false
+                
+                if (modulesToGive[name] or 0) > 0 then -- first, try to take from previous modules
+                    modulesToGive[name] = modulesToGive[name] - 1
+                    moduleTaken = true
+                else -- if that fails, try to take it from the player
+                    local taken = playerInventory.remove({name = name, count = 1})
+                    if taken > 0 then
+                        diff[name] = (diff[name] or 0) + 1
+                        moduleTaken = true
+                    end
+                end
+
+                if moduleTaken then -- we took the module and can now give it to the target machine
+                    targetInventory[i].set_stack({name = name, count = 1})
+                else -- module is missing: save that info for creating a logistic request later
+                    missing[name] = (missing[name] or 0) + 1
+                end
+            end
+        end
+
+        -- give remaining items to the player if possible
+        for name,count in pairs(modulesToGive) do
+            if count > 0 then
+                local given = playerInventory.insert({name = name, count = count})
+                if given > 0 then -- items given to player, save that info to "diff" to display message later
+                    diff[name] = (diff[name] or 0) - given
+                end
+                if given < count then -- not all items could be given, "dump" them the ground
+                    player.print({"message.kajacx_copy-paste-modules_no-inventory-space", game.item_prototypes[name].localised_name})
+                    target.surface.spill_item_stack(
+                        target.position,
+                        {name = name, count = count - given},
+                        true,
+                        player.force,
+                        false
+                    )
                 end
             end
         end
@@ -78,7 +99,12 @@ script.on_event({defines.events.on_entity_settings_pasted},
                 target.surface.create_entity({
                     name = "flying-text",
                     position = messagePosition,
-                    text = {"message.kajacx_copy-paste-modules_items-removed", count, game.item_prototypes[name].localised_name, playerInventory.get_item_count(name)}
+                    text = {
+                        "message.kajacx_copy-paste-modules_items-removed",
+                        count,
+                        game.item_prototypes[name].localised_name,
+                        playerInventory.get_item_count(name)
+                    }
                 })
                 messagePosition.y = messagePosition.y - 0.5
                 playSound = true;
@@ -86,7 +112,12 @@ script.on_event({defines.events.on_entity_settings_pasted},
                 target.surface.create_entity({
                     name = "flying-text",
                     position = messagePosition,
-                    text = {"message.kajacx_copy-paste-modules_items-added", -count, game.item_prototypes[name].localised_name, playerInventory.get_item_count(name)}
+                    text = {
+                        "message.kajacx_copy-paste-modules_items-added",
+                        -count,
+                        game.item_prototypes[name].localised_name,
+                        playerInventory.get_item_count(name)
+                    }
                 })
                 messagePosition.y = messagePosition.y - 0.5
                 playSound = true;
@@ -98,12 +129,7 @@ script.on_event({defines.events.on_entity_settings_pasted},
         
         -- finally, create logistic request in the target entity
         if next(missing) ~= nil and player.mod_settings["kajacx_copy-paste-modules_enable-request"].value then
-            local freeSlots = 0
-            for i = 1,#targetInventory,1 do
-                if not targetInventory[i].valid_for_read then
-                    freeSlots = freeSlots + 1
-                end
-            end
+            local freeSlots = targetInventory.count_empty_stacks()
             if freeSlots > 0 then
                 local request = {} -- fill from missing to request as long as there are free slots avaliable
                 for name,count in pairs(missing) do
@@ -123,6 +149,7 @@ script.on_event({defines.events.on_entity_settings_pasted},
                     modules = request,
                     raise_built = true
                 })
+                -- TODO: sort the items once the request is completed?
             end
         end
     end
