@@ -30,8 +30,17 @@ script.on_event({defines.events.on_entity_settings_pasted},
         })
         for _,request in pairs(targetRequests) do
             if request.proxy_target == target then
-                -- TODO: remove only requests with modules
-                request.destroy()
+                local itemRequests = request.item_requests
+                for name,_ in pairs(itemRequests) do
+                    if game.item_prototypes[name].type == "module" then
+                        itemRequests[name] = nil
+                    end
+                end
+                if next(itemRequests) == nil then
+                    request.destroy()
+                else
+                    request.item_requests = itemRequests
+                end
             end
         end
         
