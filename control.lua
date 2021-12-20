@@ -22,10 +22,7 @@ script.on_event({defines.events.on_entity_settings_pasted},
             return
         end
         
-        local messagePosition = {x = target.position.x, y = target.position.y}
-        local soundPlayed = false
-        
-        -- before start, remove existing logistic request
+        -- before start, remove existing logistic requests
         local targetRequests = target.surface.find_entities_filtered({
             area = {{target.position.x - 0.01, target.position.y - 0.01}, {target.position.x + 0.01, target.position.y + 0.01}},
             name = "item-request-proxy",
@@ -38,69 +35,65 @@ script.on_event({defines.events.on_entity_settings_pasted},
             end
         end
         
-        -- first, precompute the "diff", positive number indicates direction from player to target
+        -- first, prepare the "diff", positive number indicates direction from player to target
         local diff = {}
-        for name,count in pairs(sourceInventory.get_contents()) do
-            diff[name] = count
-        end
+        
+        -- then, remove all modules from the machine, so they can be inserted later in the same order
         for name,count in pairs(targetInventory.get_contents()) do
-            if diff[name] then
-                diff[name] = diff[name] - count
-            else
-                diff[name] = -count
+            local moved = playerInventory.insert({name = name, count = count}) -- first insert items to player in case their inventory is full
+            if moved > 0 then
+                targetInventory.remove({name = name, count = moved}) -- target will always be able to remove the items
+                diff[name] = -moved;
+            end
+            if moved < count then
+                player.print({"message.kajacx_copy-paste-modules_no-inventory-space", game.item_prototypes[name].localised_name})
+                -- TODO: dump items on the ground?
             end
         end
         
-        -- then, only move items from target to player so that space is avaliable later
-        for name,count in pairs(diff) do
-            if count < 0 then
-                local moved = playerInventory.insert({name = name, count = -count}) -- first insert items to player in case their inventory is full
-                if moved > 0 then
-                    targetInventory.remove({name = name, count = moved}) -- target will always be able to remove the items
-                    target.surface.create_entity({ -- show floating text message
-                        name = "flying-text",
-                        position = messagePosition,
-                        text = {"message.kajacx_copy-paste-modules_items-added", moved, game.item_prototypes[name].localised_name, playerInventory.get_item_count(name)}
-                    })
-                    messagePosition.y = messagePosition.y - 0.5
-                    if not soundPlayed then
-                        player.play_sound({path = "utility/inventory_move"})
-                        soundPlayed = true
-                    end
-                end
-                if moved < -count then
-                    player.print({"message.kajacx_copy-paste-modules_no-inventory-space", game.item_prototypes[name].localised_name})
-                end
-            end
-        end
-        
-        -- next, move items from player to target
+        -- next, insert modules from player to target
         local missing = {}
-        for name,count in pairs(diff) do
-            if count > 0 then
-                local taken = playerInventory.remove({name = name, count = count}) -- take items from player
-                if taken > 0 then
-                    local given = targetInventory.insert({name = name, count = taken}) -- put items to target
-                    if given > 0 then
-                        target.surface.create_entity({ -- show floating text message
-                            name = "flying-text",
-                            position = messagePosition,
-                            text = {"message.kajacx_copy-paste-modules_items-removed", given, game.item_prototypes[name].localised_name, playerInventory.get_item_count(name)}
-                        })
-                        messagePosition.y = messagePosition.y - 0.5
-                        if not soundPlayed then
-                            player.play_sound({path = "utility/inventory_move"})
-                            soundPlayed = true
-                        end
-                    end
-                    if given < taken then -- target inventory too full
-                        playerInventory.insert({name = name, count = (taken - given)}) -- return items to player if target inventory is full
-                    end
-                end
-                if taken < count then -- player is missing items in their inventory
-                    missing[name] = count - taken
+        for i=1,math.min(#targetInventory, #sourceInventory),1 do
+            local currentItem = sourceInventory[i];
+            if currentItem.valid_for_read then
+                -- item present: try to insert it
+                local taken = playerInventory.remove({name = currentItem.name, count = 1}) -- take item from player
+                if (taken > 0) then
+                    -- player has item: insert it into the target machine
+                    targetInventory.insert({name = currentItem.name, count = 1})
+                    diff[currentItem.name] = (diff[currentItem.name] or 0) + 1
+                else
+                    -- player doesn't have item: save that info for creating logistic request later
+                    missing[currentItem.name] = (missing[currentItem.name] or 0) + 1
                 end
             end
+        end
+
+        -- process the created "diff" to display "items moved" text and play sound
+        local messagePosition = {x = target.position.x, y = target.position.y}
+        local playSound = false;
+
+        for name,count in pairs(diff) do
+            if count > 0 then -- moving items from the player to a machine
+                target.surface.create_entity({
+                    name = "flying-text",
+                    position = messagePosition,
+                    text = {"message.kajacx_copy-paste-modules_items-removed", count, game.item_prototypes[name].localised_name, playerInventory.get_item_count(name)}
+                })
+                messagePosition.y = messagePosition.y - 0.5
+                playSound = true;
+            elseif count < 0 then -- moving items from a machine to the player
+                target.surface.create_entity({
+                    name = "flying-text",
+                    position = messagePosition,
+                    text = {"message.kajacx_copy-paste-modules_items-added", -count, game.item_prototypes[name].localised_name, playerInventory.get_item_count(name)}
+                })
+                messagePosition.y = messagePosition.y - 0.5
+                playSound = true;
+            end
+        end
+        if playSound then
+            player.play_sound({path = "utility/inventory_move"})
         end
         
         -- finally, create logistic request in the target entity
@@ -114,7 +107,7 @@ script.on_event({defines.events.on_entity_settings_pasted},
             if freeSlots > 0 then
                 local request = {} -- fill from missing to request as long as there are free slots avaliable
                 for name,count in pairs(missing) do
-                    if count < freeSlots then
+                    if count <= freeSlots then
                         request[name] = count
                         freeSlots = freeSlots - count
                     else
@@ -122,20 +115,15 @@ script.on_event({defines.events.on_entity_settings_pasted},
                         break
                     end
                 end
-                target.surface.create_entity
-                {
+                target.surface.create_entity({
                     name = "item-request-proxy",
                     position = target.position,
                     force = player.force,
                     target = target,
                     modules = request,
                     raise_built = true
-                }
+                })
             end
         end
     end
 )
-
-
---- UPDATE LOOP ---
-
