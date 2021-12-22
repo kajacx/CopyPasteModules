@@ -1,28 +1,16 @@
---- CoPIED FROM THE COPY AND PASTE MODULES 0.15 MOD ---
+--- Inspired by the "Copy & Paste Modules" 0.15 mod (https://mods.factorio.com/mod/copy-and-paste-modules) ---
 
--- Makes all entities of this given type copy-and-pastable.
-local function make_entity_type_pastable(entity_type)
-	local entities = data.raw[entity_type]
-	if not entities then
-		-- No such entity type.
-		return
+-- Make these entities copy pastable
+local to_make_copiable = { "furnace", "lab", "beacon" }
+for _,name in pairs(to_make_copiable) do
+	local rawEntities = data.raw[name] -- get all entities of this type
+
+	local entities = {} -- save names of those entities
+	for _, entity in pairs(rawEntities) do
+		table.insert(entities, entity.name)
 	end
-	
-	-- Record all entity names of this type.
-	local entity_names = {}
-	for _, entity in pairs(entities) do
-		table.insert(entity_names, entity.name)
-	end
-	
-	-- Make them copy-and-pastable.
-	for _, entity in pairs(entities) do
-		entity.additional_pastable_entities = entity_names
+
+	for _, entity in pairs(rawEntities) do -- and make them all be able to copy and paste into each other
+		entity.additional_pastable_entities = entities
 	end
 end
-
-
--- Make all furnaces, labs and beacons copy-and-paste-able.
-make_entity_type_pastable("furnace")
-make_entity_type_pastable("lab")
-make_entity_type_pastable("beacon")
---make_entity_type_pastable("mining-drill") already copiable in 0.17
