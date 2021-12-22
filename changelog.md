@@ -3,9 +3,11 @@
 
 ## Factorio version 1.1
 
-### 0.0.7 (???)
+### 0.0.7 (2021-12-22)
 Features:
 * Added czech locale
+* Modules now are inserted in the same order as they are in the source machine
+* Modules that don't fit in the player's inventory are now dumped on the ground instead of remaining in the machine
 
 ### 0.0.6 (2020-12-28)
 Features:
