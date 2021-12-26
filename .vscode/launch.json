@@ -1,0 +1,35 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "factoriomod",
+            "request": "launch",
+            "name": "Factorio Mod Debug",
+            "factorioPath": "E:/Games/factorio/Factorio_Develop/bin/x64/factorio.exe",
+            "configPath": "E:/Games/factorio/Factorio_Develop/config/config.ini",
+            "modsPath": "E:/Games/factorio/Factorio_Develop/mods"
+        },
+        {
+            "type": "factoriomod",
+            "request": "launch",
+            "name": "Factorio Mod Debug (Settings & Data)",
+            "factorioPath": "E:/Games/factorio/Factorio_Develop/bin/x64/factorio.exe",
+            "configPath": "E:/Games/factorio/Factorio_Develop/config/config.ini",
+            "modsPath": "E:/Games/factorio/Factorio_Develop/mods",
+            "hookSettings": true,
+            "hookData": true
+        },
+        {
+            "type": "factoriomod",
+            "request": "launch",
+            "name": "Factorio Mod Debug (Profile)",
+            "factorioPath": "E:/Games/factorio/Factorio_Develop/bin/x64/factorio.exe",
+            "configPath": "E:/Games/factorio/Factorio_Develop/config/config.ini",
+            "modsPath": "E:/Games/factorio/Factorio_Develop/mods",
+            "hookMode": "profile"
+        }
+    ]
+}
