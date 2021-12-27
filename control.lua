@@ -32,12 +32,19 @@ script.on_event({ defines.events.on_pre_build },
         end
 
         local blueprint_item = player.cursor_stack
+        while blueprint_item and blueprint_item.is_blueprint_book do
+            local items = blueprint_item.get_inventory(defines.inventory.item_main)
+            if not blueprint_item.active_index or blueprint_item.active_index > #items then
+                return -- this should never happen, but return anyway to be sure that nothing goes wrong
+            end
+            blueprint_item = items[blueprint_item.active_index]
+        end
         if not blueprint_item or not blueprint_item.is_blueprint or not blueprint_item.is_blueprint_setup() then
             -- player doesn't hold blueprint in their hand - nothing to do
             return
         end
 
-        local blueprint_entities = process_blueprint(blueprint_item.get_blueprint_entities(), event.position, event.direction)
+        local blueprint_entities = process_blueprint(blueprint_item.get_blueprint_entities(), event)
 
         for _,entity in pairs(blueprint_entities) do
             local found_entities = player.surface.find_entities_filtered({

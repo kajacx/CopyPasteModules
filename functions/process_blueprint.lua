@@ -1,11 +1,39 @@
-return function(blueprint_entities, cursor_position, rotation)
-    -- first, rotate the blueprint and compute it's size
+return function(blueprint_entities, event)
+    local cursor_position = event.position
+    local rotation = event.direction or defines.direction.north
+
+    -- first, rotate (and/or flip) the blueprint and compute it's size
     local rotated_entities = {}
 
-    local xCoord = rotation % 4 > 0 and "y" or "x"
-    local yCoord = rotation % 4 > 0 and "x" or "y"
-    local xSign = (rotation + 2) % 8 >= 4 and -1 or 1
-    local ySign =  rotation          >= 4 and -1 or 1
+    -- map from "blueprint" entity direction to world direction
+    local direction_map = { defines.direction.north, defines.direction.east, defines.direction.south, defines.direction.west }
+
+    -- row-major tranformation matrix
+    local location_tranform = {
+        { x = 1, y = 0 },
+        { x = 0, y = 1 },
+    }
+
+    if event.flip_horizontal then
+        location_tranform[1].x = -1
+        direction_map[2] = defines.direction.west
+        direction_map[4] = defines.direction.east
+    end
+    if event.flip_vertical then
+        location_tranform[2].y = -1
+        direction_map[1] = defines.direction.south
+        direction_map[3] = defines.direction.north
+    end
+
+    for _i=2,rotation,2 do
+        -- multiply by the rotation matrix from the left
+        local swap_x = location_tranform[1].x
+        location_tranform[1].x = -location_tranform[2].x
+        location_tranform[2].x = swap_x
+        local swap_y = location_tranform[1].y
+        location_tranform[1].y = -location_tranform[2].y
+        location_tranform[2].y = swap_y
+    end
 
     local minX =  1000000000
     local minY =  1000000000
@@ -15,11 +43,12 @@ return function(blueprint_entities, cursor_position, rotation)
     for _,entity in pairs(blueprint_entities) do
         local direction = defines.direction.north
         if game.entity_prototypes[entity.name].supports_direction then
-            direction = ((entity.direction or defines.direction.north) + rotation) % 8
+            direction = entity.direction or defines.direction.north
+            direction = direction_map[direction / 2 + 1]
         end
 
-        local posX = entity.position[xCoord] * xSign
-        local posY = entity.position[yCoord] * ySign
+        local posX = location_tranform[1].x * entity.position.x + location_tranform[1].y * entity.position.y
+        local posY = location_tranform[2].x * entity.position.x + location_tranform[2].y * entity.position.y
 
         table.insert(rotated_entities, {
             name = entity.name,
