@@ -37,9 +37,9 @@ script.on_event({ defines.events.on_pre_build },
             return
         end
 
-        local blueprint = process_blueprint(blueprint_item.get_blueprint_entities(), event.position)
+        local blueprint_entities = process_blueprint(blueprint_item.get_blueprint_entities(), event.position, event.direction)
 
-        for _,entity in pairs(blueprint) do
+        for _,entity in pairs(blueprint_entities) do
             local found_entities = player.surface.find_entities_filtered({
                 area = {
                     { entity.position.x - 0.01, entity.position.y - 0.01 },
