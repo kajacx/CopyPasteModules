@@ -1,39 +1,50 @@
-local function entity_size(entity_name)
-    local collision_box = game.entity_prototypes[entity_name].collision_box
+return function(blueprint_entities, cursor_position, rotation)
+    -- first, rotate the blueprint and compute it's size
+    local rotated_entities = {}
 
-    -- FIXME: why would collision box in PROTOTYPE ever be rotated? ask the entity instead!
+    local xCoord = rotation % 4 > 0 and "y" or "x"
+    local yCoord = rotation % 4 > 0 and "x" or "y"
+    local xSign = (rotation + 2) % 8 >= 4 and -1 or 1
+    local ySign =  rotation          >= 4 and -1 or 1
 
-    -- TODO: is there no better way to compute the size of an entity?
-    local width  = math.ceil(collision_box.right_bottom.x - collision_box.left_top.x)
-    local height = math.ceil(collision_box.right_bottom.y - collision_box.left_top.y)
-
-    if collision_box.direction == defines.direction.east or collision_box.direction == defines.direction.west then
-        -- TODO: check that this is correct with a rectangular entity
-        local swap = width
-        width = height
-        height = swap
-    end
-
-    return {
-        width = width,
-        height = height
-    }
-end
-
-return function(blueprint_entities, cursor_position)
-    -- first, compute the size of the blueprint
     local minX =  1000000000
     local minY =  1000000000
     local maxX = -1000000000
     local maxY = -1000000000
 
     for _,entity in pairs(blueprint_entities) do
-        local size = entity_size(entity.name)
+        local direction = defines.direction.north
+        if game.entity_prototypes[entity.name].supports_direction then
+            direction = ((entity.direction or defines.direction.north) + rotation) % 8
+        end
 
-        minX = math.min(minX, math.floor(entity.position.x - size.width  / 2))
-        minY = math.min(minY, math.floor(entity.position.y - size.height / 2))
-        maxX = math.max(maxX, math.ceil (entity.position.x + size.width  / 2))
-        maxY = math.max(maxY, math.ceil (entity.position.y + size.height / 2))
+        local posX = entity.position[xCoord] * xSign
+        local posY = entity.position[yCoord] * ySign
+
+        table.insert(rotated_entities, {
+            name = entity.name,
+            position = {
+                x = posX,
+                y = posY,
+            },
+            direction = direction,
+            items = entity.items
+        })
+
+        local collision_box = game.entity_prototypes[entity.name].collision_box
+        local width  = (collision_box.right_bottom.x - collision_box.left_top.x)
+        local height = (collision_box.right_bottom.y - collision_box.left_top.y)
+    
+        if direction == defines.direction.east or direction == defines.direction.west then
+            local swap = width
+            width = height
+            height = swap
+        end
+
+        minX = math.min(minX, math.floor(posX - width  / 2 + 0.5))
+        minY = math.min(minY, math.floor(posY - height / 2 + 0.5))
+        maxX = math.max(maxX, math.floor(posX + width  / 2 + 0.5))
+        maxY = math.max(maxY, math.floor(posY + height / 2 + 0.5))
     end
 
     local blueprint_width  = maxX - minX
@@ -43,9 +54,9 @@ return function(blueprint_entities, cursor_position)
     local alignX = math.floor(cursor_position.x - blueprint_width  / 2 + 0.5) - minX
     local alignY = math.floor(cursor_position.y - blueprint_height / 2 + 0.5) - minY
 
-    -- finally, process modules and add align to entity positions
-    local new_entities = {}
-    for _,entity in pairs(blueprint_entities) do
+    -- finally, add align to entity positions
+    local final_entities = {}
+    for _,entity in pairs(rotated_entities) do
         if game.entity_prototypes[entity.name].module_inventory_size then
             local modules = {}
             for name,count in pairs(entity.items or {}) do
@@ -59,17 +70,17 @@ return function(blueprint_entities, cursor_position)
                 end
             end
 
-            table.insert(new_entities, {
+            table.insert(final_entities, {
                 name = entity.name,
                 position = {
                     x = entity.position.x + alignX,
-                    y = entity.position.y + alignY
+                    y = entity.position.y + alignY,
                 },
-                direction = entity.direction or defines.direction.north,
+                direction = entity.direction,
                 modules = modules
             })
         end
     end
 
-    return new_entities
+    return final_entities
 end
