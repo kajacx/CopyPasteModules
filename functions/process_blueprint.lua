@@ -1,3 +1,73 @@
+local function direction_to_vector(direction)
+    if direction == defines.direction.north then
+        return { x = 0, y = -1 }
+    end
+    if direction == defines.direction.northeast then
+        return { x = 1, y = -1 }
+    end
+    if direction == defines.direction.east then
+        return { x = 1, y = 0 }
+    end
+    if direction == defines.direction.southeast then
+        return { x = 1, y = 1 }
+    end
+    if direction == defines.direction.south then
+        return { x = 0, y = 1 }
+    end
+    if direction == defines.direction.southwest then
+        return { x = -1, y = 1 }
+    end
+    if direction == defines.direction.west then
+        return { x = -1, y = 0 }
+    end
+    if direction == defines.direction.northwest then
+        return { x = -1, y = -1 }
+    end
+    return { x = 0, y = -1 } -- north
+end
+
+local function vector_to_direction(vector)
+    if vector.x == 0 and vector.y < 0 then
+        return defines.direction.north
+    end
+    if vector.x > 0 and vector.y < 0 then
+        return defines.direction.northeast
+    end
+    if vector.x > 0 and vector.y == 0 then
+        return defines.direction.east
+    end
+    if vector.x > 0 and vector.y > 0 then
+        return defines.direction.southeast
+    end
+    if vector.x == 0 and vector.y > 0 then
+        return defines.direction.south
+    end
+    if vector.x < 0 and vector.y > 0 then
+        return defines.direction.southwest
+    end
+    if vector.x < 0 and vector.y == 0 then
+        return defines.direction.west
+    end
+    if vector.x < 0 and vector.y < 0 then
+        return defines.direction.northwest
+    end
+    return defines.direction.north
+end
+
+local function multiply_matrix_vector(matrix, vector)
+    return {
+        x = matrix[1].x * vector.x + matrix[2].x * vector.y,
+        y = matrix[1].y * vector.x + matrix[2].y * vector.y,
+    }
+end
+
+local function multiply_matrix_matrix(matrix1, matrix2)
+    return {
+        multiply_matrix_vector(matrix1, matrix2[1]),
+        multiply_matrix_vector(matrix1, matrix2[2]),
+    }
+end
+
 return function(blueprint_entities, event)
     local cursor_position = event.position
     local rotation = event.direction or defines.direction.north
@@ -5,10 +75,7 @@ return function(blueprint_entities, event)
     -- first, rotate (and/or flip) the blueprint and compute it's size
     local rotated_entities = {}
 
-    -- map from "blueprint" entity direction to world direction
-    local direction_map = { defines.direction.north, defines.direction.east, defines.direction.south, defines.direction.west }
-
-    -- row-major tranformation matrix
+    -- column-major tranformation matrix
     local location_tranform = {
         { x = 1, y = 0 },
         { x = 0, y = 1 },
@@ -16,23 +83,18 @@ return function(blueprint_entities, event)
 
     if event.flip_horizontal then
         location_tranform[1].x = -1
-        direction_map[2] = defines.direction.west
-        direction_map[4] = defines.direction.east
     end
     if event.flip_vertical then
         location_tranform[2].y = -1
-        direction_map[1] = defines.direction.south
-        direction_map[3] = defines.direction.north
     end
 
     for _i=2,rotation,2 do
         -- multiply by the rotation matrix from the left
-        local swap_x = location_tranform[1].x
-        location_tranform[1].x = -location_tranform[2].x
-        location_tranform[2].x = swap_x
-        local swap_y = location_tranform[1].y
-        location_tranform[1].y = -location_tranform[2].y
-        location_tranform[2].y = swap_y
+        local rotation_matrix = {
+            { x =  0, y = 1 },
+            { x = -1, y = 0 }
+        }
+        location_tranform = multiply_matrix_matrix(rotation_matrix, location_tranform)
     end
 
     local minX =  1000000000
@@ -43,19 +105,15 @@ return function(blueprint_entities, event)
     for _,entity in pairs(blueprint_entities) do
         local direction = defines.direction.north
         if game.entity_prototypes[entity.name].supports_direction then
-            direction = entity.direction or defines.direction.north
-            direction = direction_map[direction / 2 + 1]
+            local direction_vector = direction_to_vector(entity.direction or defines.direction.north)
+            direction = vector_to_direction(multiply_matrix_vector(location_tranform, direction_vector))
         end
 
-        local posX = location_tranform[1].x * entity.position.x + location_tranform[1].y * entity.position.y
-        local posY = location_tranform[2].x * entity.position.x + location_tranform[2].y * entity.position.y
+        local position = multiply_matrix_vector(location_tranform, entity.position)
 
         table.insert(rotated_entities, {
             name = entity.name,
-            position = {
-                x = posX,
-                y = posY,
-            },
+            position = position,
             direction = direction,
             items = entity.items
         })
@@ -70,10 +128,10 @@ return function(blueprint_entities, event)
             height = swap
         end
 
-        minX = math.min(minX, math.floor(posX - width  / 2 + 0.5))
-        minY = math.min(minY, math.floor(posY - height / 2 + 0.5))
-        maxX = math.max(maxX, math.floor(posX + width  / 2 + 0.5))
-        maxY = math.max(maxY, math.floor(posY + height / 2 + 0.5))
+        minX = math.min(minX, math.floor(position.x - width  / 2 + 0.5))
+        minY = math.min(minY, math.floor(position.y - height / 2 + 0.5))
+        maxX = math.max(maxX, math.floor(position.x + width  / 2 + 0.5))
+        maxY = math.max(maxY, math.floor(position.y + height / 2 + 0.5))
     end
 
     local blueprint_width  = maxX - minX
