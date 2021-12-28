@@ -3,9 +3,9 @@
 
 ## Factorio version 1.1
 
-### 0.0.8 (???)
+### 0.1.0 (???)
 Features:
-* Copy modules when pasing over an entity with a blueprint
+* Copy modules when building over an entity with a blueprint
 
 ### 0.0.7 (2021-12-22)
 Features:
