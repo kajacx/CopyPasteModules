@@ -5,7 +5,7 @@ Copy and paste modules mod for Factorio. [Factorio mod portal](https://mods.fact
 
 ## Version
 
-Current version in compatible with Factiorio 1.1.
+Current version in compatible with Factorio 1.1.
 See the [changelog](https://github.com/kajacx/CopyPasteModules/blob/master/changelog.md) for more information.
 
 
