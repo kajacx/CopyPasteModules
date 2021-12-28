@@ -45,4 +45,4 @@ If you want to contribute, then you can do so by creating a pull request.
 
 ## License
 
-This mod is licenced under the [MIT Licence](https://github.com/kajacx/CopyPasteModules/blob/master/LICENSE).
+This mod is licensed under the [MIT Licence](https://github.com/kajacx/CopyPasteModules/blob/master/LICENSE).
