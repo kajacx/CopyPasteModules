@@ -17,7 +17,7 @@ into another machine (shift + left click) and voila, the modules are copied (ins
 The inserted modules will be sorted in the same order. You can also copy from a machine with no modules to remove all modules.
 
 If the player doesn't have enough modules, a logistic request can be automatically created (turned on by default)
-to fill those modules from the logistic network. However, the additional modules will not be sorted.
+to fill those modules from the logistic network. However, the additional modules will not be sorted (this may be changed in a future version).
 
 From 0.1.0 it also works when placing blueprint with modules (or a blueprint with no modules to remove modules!)
 over an entity, these modules will also not be sorted, since Factorio keeps only counts of modules in the blueprint data.
