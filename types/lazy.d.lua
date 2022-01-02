@@ -1,0 +1,5 @@
+---@class LazyTableUintLuaEntity `LuaLazyLoadedValue` for type `table<uint, LuaEntity>`.
+---@field valid boolean Is this object valid?
+---@field object_name string The class name of this object.
+---@field get fun(): table<uint, LuaEntity> Gets the value of this lazy loaded value.
+---@field help fun(): string All methods and properties that this object supports.
