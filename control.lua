@@ -1,10 +1,20 @@
 local copy_modules_into = require("functions/copy_modules_into")
 local process_blueprint = require("functions/process_blueprint")
 
+---@type LuaBootstrap
+local script = script
+
+---@type Defines
+local defines = defines
+
 --- EVENTS ---
 
 script.on_event({ defines.events.on_entity_settings_pasted },
+  ---@param event OnEntitySettingsPastedEvent
   function(event)
+    ---@type LuaGameScript
+    local game = game
+
     local player = game.players[event.player_index]
 
     -- check if functionality is enabled
@@ -12,6 +22,7 @@ script.on_event({ defines.events.on_entity_settings_pasted },
       return -- do nothing
     end
 
+    ---@type LuaInventory
     local source_inventory = event.source and event.source.get_module_inventory()
     local target = event.destination
     if not source_inventory or not target then
@@ -23,7 +34,11 @@ script.on_event({ defines.events.on_entity_settings_pasted },
 )
 
 script.on_event({ defines.events.on_pre_build },
+  ---@param event OnPreBuildEvent
   function(event)
+    ---@type LuaGameScript
+    local game = game
+
     local player = game.players[event.player_index]
 
     -- check if functionality is enabled

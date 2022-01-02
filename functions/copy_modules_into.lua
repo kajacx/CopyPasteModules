@@ -1,3 +1,9 @@
+--- Copies modules from `source_module_inventory` to `target_entity`.
+---@param source_module_inventory LuaItemStack[] Sorted modules in an array of 1 item per array element.
+---@param target_entity LuaEntity Entity into which the modules should be copied.
+---@param player LuaPlayer The player that issued the copy request.
+---@param interact_with_player boolean Can change player's inventory and display taken / given message.
+---@param create_logistic_request boolean Can create a logistic request if the player doesn't have enought modules.
 return function(source_module_inventory, target_entity, player, interact_with_player, create_logistic_request)
   -- prepare commonly used variables
   local target_inventory = target_entity.get_module_inventory()
@@ -45,7 +51,7 @@ return function(source_module_inventory, target_entity, player, interact_with_pl
     if currentItem.valid_for_read then -- item present
       local name = currentItem.name
       local module_taken = false
-      
+
       if (modules_to_give[name] or 0) > 0 then -- first, try to take from previous modules
         modules_to_give[name] = modules_to_give[name] - 1
         module_taken = true

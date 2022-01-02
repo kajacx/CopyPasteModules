@@ -1,3 +1,19 @@
+---@alias Matrix2 Position[] Column-major 2x2 matrix
+
+---@class RotatedEntity
+---@field name string
+---@field position Position
+---@field direction DefinesDirection
+---@field items table<string, uint>
+
+---@class ProcessedEntity
+---@field name string
+---@field position Position
+---@field direction DefinesDirection
+---@field modules LuaInventory
+
+---@param direction DefinesDirection
+---@return Position
 local function direction_to_vector(direction)
   if direction == defines.direction.north then
     return { x = 0, y = -1 }
@@ -26,6 +42,8 @@ local function direction_to_vector(direction)
   return { x = 0, y = -1 } -- north
 end
 
+---@param vector Position
+---@return DefinesDirection
 local function vector_to_direction(vector)
   if vector.x == 0 and vector.y < 0 then
     return defines.direction.north
@@ -54,6 +72,9 @@ local function vector_to_direction(vector)
   return defines.direction.north
 end
 
+---@param matrix Matrix2
+---@param vector Position
+---@return Position
 local function multiply_matrix_vector(matrix, vector)
   return {
     x = matrix[1].x * vector.x + matrix[2].x * vector.y,
@@ -61,6 +82,9 @@ local function multiply_matrix_vector(matrix, vector)
   }
 end
 
+---@param matrix1 Matrix2
+---@param matrix2 Matrix2
+---@return Position
 local function multiply_matrix_matrix(matrix1, matrix2)
   return {
     multiply_matrix_vector(matrix1, matrix2[1]),
@@ -68,11 +92,19 @@ local function multiply_matrix_matrix(matrix1, matrix2)
   }
 end
 
+--- Calculates real positions of blueprint entities and tranforms their modules so that they can be fed into `comy_modules_into`.
+---@param blueprint_entities BlueprintEntity[]
+---@param event OnPreBuildEvent
+---@return ProcessedEntity[]
 return function(blueprint_entities, event)
+  ---@type LuaGameScript
+  local game = game
+
   local cursor_position = event.position
   local rotation = event.direction or defines.direction.north
 
   -- first, rotate (and/or flip) the blueprint and compute it's size
+  ---@type RotatedEntity[]
   local rotated_entities = {}
 
   -- column-major tranformation matrix
@@ -142,6 +174,7 @@ return function(blueprint_entities, event)
   local alignY = math.floor(cursor_position.y - blueprint_height / 2 + 0.5) - minY
 
   -- finally, add align to entity positions
+  ---@type ProcessedEntity[]
   local final_entities = {}
   for _,entity in pairs(rotated_entities) do
     if game.entity_prototypes[entity.name].module_inventory_size then

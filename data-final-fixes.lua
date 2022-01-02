@@ -1,5 +1,8 @@
 --- Inspired by the "Copy & Paste Modules" 0.15 mod (https://mods.factorio.com/mod/copy-and-paste-modules) ---
 
+---@type Data
+local data = data
+
 -- Make these entities copy pastable
 local to_make_copiable = { "furnace", "lab", "beacon" }
 for _,name in pairs(to_make_copiable) do

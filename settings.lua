@@ -1,3 +1,6 @@
+---@type Data
+local data = data
+
 data:extend({
 	{
 		type = "bool-setting",
