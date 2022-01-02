@@ -44,6 +44,11 @@ script.on_event({ defines.events.on_pre_build },
       return
     end
 
+    if blueprint_item.blueprint_snap_to_grid ~= nil then
+      -- TODO: implement calculations when spanning in the next version
+      return
+    end
+
     local blueprint_entities = process_blueprint(blueprint_item.get_blueprint_entities(), event)
 
     for _,entity in pairs(blueprint_entities) do
