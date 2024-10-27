@@ -3,6 +3,10 @@
 
 ## Factorio version 1.1
 
+### 0.2.0 (2024-10-21)
+Features:
+* Update to factorio version 2.0
+
 ### 0.1.1 (2022-01-04)
 Bugfixes:
 * Fixed crashing bug when placing a blueprint with only tiles

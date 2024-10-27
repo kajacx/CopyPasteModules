@@ -35,14 +35,6 @@ Create logistic request when the player does not have enough modules on them.
 Copy modules (create a logistic request) when building over an existing entity with a blueprint.
 
 
-## Contributing
-
-If you want to contribute, then you can do so by creating a pull request.
- - If your PR is a new feature or a change in behaviour to an existing feature,
- then please fork it from the [develop](https://github.com/kajacx/CopyPasteModules/tree/develop) branch.
- - If your PR fixes a bug in the released version of the mod,
- then please fork it from the [master](https://github.com/kajacx/CopyPasteModules/tree/master) branch.
-
 ## License
 
 This mod is licensed under the [MIT Licence](https://github.com/kajacx/CopyPasteModules/blob/master/LICENSE).

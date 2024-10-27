@@ -27,7 +27,7 @@ script.on_event({ defines.events.on_pre_build },
     local player = game.players[event.player_index]
 
     -- check if functionality is enabled
-    if not player or not player.mod_settings["kajacx_copy-paste-modules_enable-blueprint"].value then
+    if not player or not player.mod_settings["kajacx_copy-paste-modules_enable-blueprint"].value or true then
       return -- do nothing
     end
 

@@ -147,7 +147,7 @@ return function(blueprint_entities, event)
     if game.entity_prototypes[entity.name].module_inventory_size then
       local modules = {}
       for name,count in pairs(entity.items or {}) do
-        if game.item_prototypes[name].type == "module" then
+        if prototypes['item'][name].type == "module" then
           for _i=1,count,1 do
             table.insert(modules, {
               valid_for_read = true,
