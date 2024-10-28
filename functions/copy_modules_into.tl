@@ -3,13 +3,13 @@ local remove_module_request = require("helpers/remove_module_request")
 local dump_items_on_entity = require("helpers/dump_items_on_entity")
 local create_module_request = require("helpers/create_module_request")
 
-local function put_modules_into_inventory(desired_inventory, previous_modules, target_inventory, player, interact_with_player)
+local function put_modules_into_inventory(desired_inventory: LuaInventory, previous_modules: LuaInventory, target_inventory: LuaInventory, player: LuaPlayer, interact_with_player: boolean)
     local player_inventory = player.get_main_inventory()
     local slots_remaining = #target_inventory
-    for _, desired in pairs(desired_inventory.get_contents()) do
+    for _, desired in ipairs(desired_inventory.get_contents()) do
         local desired_amount = math.min(desired.count, slots_remaining)
         if (desired_amount == 0) then -- game will crash when removing 0 items :(
-            goto continue
+            goto continue 
         end
 
         -- Take from previous modules first, then from player (if possible)
@@ -34,9 +34,9 @@ local function put_modules_into_inventory(desired_inventory, previous_modules, t
 end
 
 
-local function give_items_to_player(player, item_inventory)
+local function give_items_to_player(player: LuaPlayer, item_inventory: LuaInventory)
     local player_inventory = player.get_main_inventory()
-    for _,item in pairs(item_inventory.get_contents()) do
+    for _,item in ipairs(item_inventory.get_contents()) do
         local given = player_inventory.insert(item)
         if (given > 0) then
             -- remove must be here, game will crash when removing 0 items
@@ -46,11 +46,11 @@ local function give_items_to_player(player, item_inventory)
     end
 end
 
-local function show_text(player, text)
+local function show_text(player: LuaPlayer, text: string)
   player.create_local_flying_text({ text = text, create_at_cursor = true })
 end
 
-return function(source_module_inventory, target_entity, player, interact_with_player, create_logistic_request)
+return function(source_module_inventory: LuaInventory, target_entity: LuaEntity, player: LuaPlayer, interact_with_player: boolean)
     local target_inventory = target_entity.get_module_inventory()
     if not target_inventory then
         return

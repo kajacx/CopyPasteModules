@@ -1,6 +1,6 @@
 #!/usr/bin/sh
 set -e
 
-tl gen *.tl 
-tl gen functions/*.tl
-tl gen helpers/*.tl
+tl check *.tl && tl gen *.tl 
+tl check functions/*tl && gen functions/*.tl
+tl check helpers/*tl && gen helpers/*.tl
