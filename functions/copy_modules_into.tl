@@ -2,11 +2,12 @@ local clone_inventory = require("helpers/clone_inventory")
 local remove_module_request = require("helpers/remove_module_request")
 local dump_items_on_entity = require("helpers/dump_items_on_entity")
 local create_module_request = require("helpers/create_module_request")
+local mypairs = require("helpers/mypairs")
 
 local function put_modules_into_inventory(desired_inventory: LuaInventory, previous_modules: LuaInventory, target_inventory: LuaInventory, player: LuaPlayer, interact_with_player: boolean)
     local player_inventory = player.get_main_inventory()
     local slots_remaining = #target_inventory
-    for _, desired in ipairs(desired_inventory.get_contents()) do
+    for _, desired in mypairs(desired_inventory.get_contents()) do
         local desired_amount = math.min(desired.count, slots_remaining)
         if (desired_amount == 0) then -- game will crash when removing 0 items :(
             goto continue 
@@ -36,7 +37,7 @@ end
 
 local function give_items_to_player(player: LuaPlayer, item_inventory: LuaInventory)
     local player_inventory = player.get_main_inventory()
-    for _,item in ipairs(item_inventory.get_contents()) do
+    for _,item in mypairs(item_inventory.get_contents()) do
         local given = player_inventory.insert(item)
         if (given > 0) then
             -- remove must be here, game will crash when removing 0 items
@@ -50,14 +51,14 @@ local function show_text(player: LuaPlayer, text: string)
   player.create_local_flying_text({ text = text, create_at_cursor = true })
 end
 
-return function(source_module_inventory: LuaInventory, target_entity: LuaEntity, player: LuaPlayer, interact_with_player: boolean)
+return function(source_module_inventory: LuaInventory, target_entity: LuaEntity, player: LuaPlayer, interact_with_player: boolean, create_logistic_request: boolean)
     local target_inventory = target_entity.get_module_inventory()
     if not target_inventory then
         return
     end
     
     -- before start, remove existing logistic requests for modules
-    remove_module_request(target_entity)
+    remove_module_request(target_entity, player)
     
     -- take previous items and store them in a variable to be given out later
     local previous_inventory = clone_inventory(target_inventory)
@@ -73,10 +74,10 @@ return function(source_module_inventory: LuaInventory, target_entity: LuaEntity,
     if interact_with_player then
         give_items_to_player(player, previous_inventory)
     end
-    dump_items_on_entity(target_entity, previous_inventory.get_contents())
+    dump_items_on_entity(target_entity, previous_inventory)
     
     -- Create logistinc request for missing modules
     if create_logistic_request then
-        create_module_request(target_entity, desired_inventory.get_contents())
+        create_module_request(target_entity, desired_inventory, player)
     end
 end
