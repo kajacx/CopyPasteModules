@@ -27,12 +27,12 @@ function removeWhereA(array, pred, multiple) -- returns index of item if yes, or
 		if pred(item) then
 			table.remove(array, i)
 			if not multiple then
-				return
+				return i
 			end
-			i = i - 1
 			removedNum = removedNum + 1
+		else
+			i = i + 1
 		end
-		i = i + 1
 	end
 	if multiple then
 		return removedNum
@@ -54,11 +54,11 @@ script.on_event({ defines.events.on_entity_settings_pasted },
     end
 	 
 	local sourceIsGhost = source.name == "entity-ghost"
-    local source_module_inventory = sourceIsGhost and nil or source.get_module_inventory()
-	local sourceInventorySize = sourceIsGhost and source.ghost_prototype.module_inventory_size or #source_module_inventory
+	local source_module_inventory = sourceIsGhost and nil or source.get_module_inventory()
+	local sourceInventorySize = sourceIsGhost and source.ghost_prototype.module_inventory_size or source_module_inventory and #source_module_inventory or 0
 	local targetIsGhost = target.name == "entity-ghost"
 	local target_module_inventory = targetIsGhost and nil or target.get_module_inventory()
-	local targetInventorySize = targetIsGhost and target.ghost_prototype.module_inventory_size or #target_module_inventory
+	local targetInventorySize = targetIsGhost and target.ghost_prototype.module_inventory_size or target_module_inventory and #target_module_inventory or 0
     if not (sourceInventorySize > 0 and targetInventorySize > 0) then
       return
     end
