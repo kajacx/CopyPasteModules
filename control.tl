@@ -11,13 +11,13 @@ script.on_event({ defines.events.on_entity_settings_pasted },
       return -- do nothing
     end
 
-    local source_inventory = event.source and event.source.get_module_inventory()
+    local source = event.source
     local target = event.destination
-    if not source_inventory or not target then
+    if not source or not target then
       return
     end
 
     local create_request = player.mod_settings["kajacx_copy-paste-modules_enable-request"].value;
-    copy_modules_into(source_inventory, target, player, true, create_request as boolean)
+    copy_modules_into(source, target, player, true, create_request as boolean)
   end
 )

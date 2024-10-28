@@ -1,10 +1,11 @@
 local mypairs = require("helpers/mypairs")
+local better_print = require("helpers/better_print")
 
 return function (entity: LuaEntity, modules: LuaInventory, player: LuaPlayer)
     local module_inventory = entity.get_module_inventory()
     local slots_remaining = #module_inventory
 
-    game.print("NANI?" .. type(module_inventory) .. serpent.block(module_inventory.get_contents()))
+    better_print("NANI?" .. type(module_inventory) .. serpent.block(module_inventory.get_contents()))
     for _,item in mypairs(module_inventory.get_contents()) do
         slots_remaining = slots_remaining - item.count
     end
@@ -19,7 +20,7 @@ return function (entity: LuaEntity, modules: LuaInventory, player: LuaPlayer)
                 force = entity.force,
                 target = entity,
                 player = player,
-                modules = { name = item.name, quality = item.quality, count = insert_count }
+                -- modules = { name = item.name, quality = item.quality, count = insert_count }
             })
             slots_remaining = slots_remaining - insert_count
         end

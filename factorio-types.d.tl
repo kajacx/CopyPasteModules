@@ -17,6 +17,15 @@ global interface LuaInventory
     clear: function()
 end
 
+global interface ItemCountWithQuality
+    name: string
+    count: integer
+    quality: QualityPrototypeName
+    set_stack: function(stack: ItemCountWithQuality)
+    clear: function()
+    valid_for_read: boolean
+end
+
 global record LuaEntity
     name: string
     get_module_inventory: function(): LuaInventory
@@ -24,21 +33,18 @@ global record LuaEntity
     position: MapPosition
     force: LuaForce
     destroy: function(player?: LuaPlayer)
-end
 
-global record LuaItemRequestProxyEntity is LuaEntity
-    where self.name == "request-item-proxy"
+    -- TODO: request-item-proxy only
     proxy_target: LuaEntity
     insert_plan: {BlueprintInsertPlan}
     removal_plan: {BlueprintInsertPlan}
     item_requests: {ItemCountWithQuality}
 end
 
-
 global record LuaSurface
     create_entity: function(entity: CreateEntityParams): LuaEntity
     spill_item_stack: function(stack: any)
-    find_entities_filtered: function<E is LuaEntity>(params: any): {E}
+    find_entities_filtered: function(params: any): {LuaEntity}
 end
 
 global interface CreateEntityParams
@@ -65,7 +71,7 @@ global interface BlueprintInsertPlan
 end
 
 global interface ItemIDAndQualityIDPair
-    name: ItemIDAndQualityIDPair
+    name: string
     quality: QualityPrototypeName
 end
 
@@ -88,11 +94,6 @@ global record LuaItemStack
 
 end
 
-global interface ItemCountWithQuality
-    name: string
-    count: integer
-    quality: QualityPrototypeName
-end
 
 -- global type ItemStackDefinition = interface
 --     name: string

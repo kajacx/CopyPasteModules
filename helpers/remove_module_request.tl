@@ -1,7 +1,8 @@
 local mypairs = require("helpers/mypairs")
+local better_print = require("helpers/better_print")
 
 return function (entity: LuaEntity, player: LuaPlayer)
-    local target_requests: {LuaItemRequestProxyEntity} = entity.surface.find_entities_filtered({
+    local target_requests = entity.surface.find_entities_filtered({
         area = {
             { entity.position.x - 0.01, entity.position.y - 0.01 },
             { entity.position.x + 0.01, entity.position.y + 0.01 }
@@ -10,7 +11,7 @@ return function (entity: LuaEntity, player: LuaPlayer)
         force = entity.force
     })
     for _,request in mypairs(target_requests) do
-        game.print("NANI? " .. serpent.block(request.insert_plan[1]))
+        better_print("NANI? " .. serpent.block(request.insert_plan[1]))
 
         if request.proxy_target == entity then
             local item_requests = request.item_requests
