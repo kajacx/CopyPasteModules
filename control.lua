@@ -285,13 +285,13 @@ script.on_event({ defines.events.on_entity_settings_pasted },
 				if (true) then
 					player.print({ "message.kajacx_copy-paste-modules_no-inventory-space", prototypes.item[iteminfo.name].localised_name })
 				end
-				target.surface.spill_item_stack(
-					target.position,
-					{ name = iteminfo.name, count = iteminfo.count - given, quality = iteminfo.quality },
-					true,
-					player.force,
-					false
-				)
+				target.surface.spill_item_stack{
+					position = target.position,
+					stack = { name = iteminfo.name, count = iteminfo.count - given, quality = iteminfo.quality },
+					enable_looted = true,
+					force = player.force,
+					allow_belts = false,
+				}
 			end
 		end
 	end
