@@ -9,14 +9,28 @@ function hasItemA(array, pred) -- returns index of found item if yes
 	end
 	return false
 end
-function getWhereA(array, pred) -- returns found item or nil
+function getWhereA(array, pred, startIndex) -- returns found item or nil
 	-- this function works on arrays only (keys: 1-n)
-	for i = 1, #array, 1 do
+	startIndex = startIndex or 1
+	for i = 1, #array, startIndex do
 		local item = array[i]
-		if pred(item) then
+		if pred(item, i) then
 			return item
 		end
 	end
+end
+function orderedListIterator_getNextItemIf(array, key) -- creates a function that returns the next item of an ordered list by key if the value at the specified key matches the passed nextValue
+	-- this function works on arrays only (keys: 1-n)
+	local index = 1
+	function getNextItemIf(nextValue) 
+		local item = array[index]
+		if not item then return nil end
+		if item[key] == nextValue then
+			index = index + 1
+			return item
+		end
+	end
+	return getNextItemIf
 end
 function removeWhereA(array, pred, multiple) -- returns index of item if yes, or the number of removed items if yes and multiple=true
 	-- this function works on arrays only (keys: 1-n)
@@ -53,6 +67,7 @@ script.on_event({ defines.events.on_entity_settings_pasted },
       return -- do nothing
     end
 	 
+	-- prepare commonly used variables
 	local sourceIsGhost = source.name == "entity-ghost"
 	local source_module_inventory = sourceIsGhost and nil or source.get_module_inventory()
 	local sourceInventorySize = sourceIsGhost and source.ghost_prototype.module_inventory_size or source_module_inventory and #source_module_inventory or 0
@@ -62,15 +77,28 @@ script.on_event({ defines.events.on_entity_settings_pasted },
     if not (sourceInventorySize > 0 and targetInventorySize > 0) then
       return
     end
-
 	
-	-- prepare commonly used variables
+	
 	local player_inventory = player.get_main_inventory()
-	
 	local target_module_inventory_index = target_module_inventory and target_module_inventory.index or source_module_inventory and source_module_inventory.index or nil
-
-
 	local source_modules = {} -- {name, quality, stackIndex}[] -- the stackIndex starts at 0, should be index-1
+	
+
+
+	function forEachPlannedModuleInventoryPosition(plans, func, source_module_inventory_index)
+		for _i, plan in ipairs(plans) do
+			if prototypes.item[plan.id.name].type == "module" then
+				local positions = plan.items.in_inventory
+				if positions then
+					for __i, position in ipairs(positions) do
+						if not source_module_inventory_index or position.inventory == source_module_inventory_index then
+							func(plan, position)
+						end
+					end
+				end
+			end
+		end
+	end
 	if not sourceIsGhost then
 		-- 1st see existing modules in the source entity
 		for i = 1, #source_module_inventory, 1 do
@@ -88,48 +116,29 @@ script.on_event({ defines.events.on_entity_settings_pasted },
 			name = "item-request-proxy",
 			force = player.force
 		})
+		
 		for _, request in pairs(source_requests) do
 			if request.proxy_target == source then
 				-- Remove modules that are to be removed by bot
-				for _i, plan in ipairs(request.removal_plan) do
-					local positions = plan.items.in_inventory
-					if positions then
-						for __i, position in ipairs(positions) do
-							if position.inventory == source_module_inventory.index then
-								removeWhereA(source_modules, function (item)
-									return item[3] == position.stack
-								end)
-							end
-						end
-					end
-				end
+				forEachPlannedModuleInventoryPosition(request.removal_plan, function (plan, position)
+					removeWhereA(source_modules, function (item)
+						return item[3] == position.stack
+					end)
+				end, source_module_inventory.index)
+				
 				-- add modules that are to be brought by bot
-				for _i, plan in ipairs(request.insert_plan) do
-					local positions = plan.items.in_inventory
-					if positions then
-						for __i, position in ipairs(positions) do
-							if position.inventory == source_module_inventory.index then
-								table.insert(source_modules, {plan.id.name, plan.id.quality or "normal", position.stack})
-							end
-						end
-					end
-				end
+				forEachPlannedModuleInventoryPosition(request.insert_plan, function (plan, position)
+					table.insert(source_modules, {plan.id.name, plan.id.quality or "normal", position.stack})
+				end, source_module_inventory.index)
 			end
 		end
 	else -- sourceIsGhost
-		for _i, plan in ipairs(source.insert_plan) do
-			if prototypes.item[plan.id.name].type == "module" then
-				local positions = plan.items.in_inventory
-				if positions then
-					for __i, position in ipairs(positions) do
-						table.insert(source_modules, {plan.id.name, plan.id.quality or "normal", position.stack})
-						if not target_module_inventory_index then
-							target_module_inventory_index = position.inventory
-						end
-					end
-				end
+		forEachPlannedModuleInventoryPosition(source.insert_plan, function (plan, position)
+			table.insert(source_modules, {plan.id.name, plan.id.quality or "normal", position.stack})
+			if not target_module_inventory_index then
+				target_module_inventory_index = position.inventory
 			end
-		end
+		end)
 	end
 
 
@@ -168,9 +177,9 @@ script.on_event({ defines.events.on_entity_settings_pasted },
 	end
 
 	-- next, prepare the "diff" for message display, positive number indicates direction from player to target
-	local diff = {}
+	local diff = {}  -- module_name => diff
 	-- keep modules from target machine in a variable for now, give them to player (or dump them on the ground) at the end
-	local modules_to_give = {}
+	local modules_to_give = {}  -- ItemCountWithQuality[]
 	if target_module_inventory and player_inventory then
 		modules_to_give = target_module_inventory.get_contents()
 		-- and clear target inventory
@@ -223,11 +232,12 @@ script.on_event({ defines.events.on_entity_settings_pasted },
 		if targetIsGhost then
 			missing = source_modules
 		else
+			-- if no player inventory is present then we iterate the whole target modules inventory because we might request removals
 			local endIndex = player_inventory and math.min(targetInventorySize, #source_modules) or targetInventorySize
+			local getNextItemIf = player_inventory and nil or orderedListIterator_getNextItemIf(source_modules, 3) -- O(1), much faster than getWhereA
+			
 			for _idx = 1, endIndex, 1 do
-				local currentItem = player_inventory and source_modules[_idx] or getWhereA(source_modules, function (item)
-					return item[3]+1 == _idx
-				end)
+				local currentItem = player_inventory and source_modules[_idx] or getNextItemIf(_idx-1)
 				local name, quality
 				if currentItem then
 					name = currentItem[1]
@@ -285,13 +295,13 @@ script.on_event({ defines.events.on_entity_settings_pasted },
 				if (true) then
 					player.print({ "message.kajacx_copy-paste-modules_no-inventory-space", prototypes.item[iteminfo.name].localised_name })
 				end
-				target.surface.spill_item_stack(
-					target.position,
-					{ name = iteminfo.name, count = iteminfo.count - given, quality = iteminfo.quality },
-					true,
-					player.force,
-					false
-				)
+				target.surface.spill_item_stack({
+					position = target.position,
+					stack = { name = iteminfo.name, count = iteminfo.count - given, quality = iteminfo.quality },
+					enable_looted = true,
+					force = player.force,
+					allow_belts = false
+				})
 			end
 		end
 	end
@@ -326,38 +336,37 @@ script.on_event({ defines.events.on_entity_settings_pasted },
 	-- finally, create logistic request in the target entity
 	if #toRemove > 0 or #missing > 0 then
 		assert(target_module_inventory_index ~= nil, "Could not obtain module inventory id")
-	end
-	local request = {}
-	local removal = {} 
-	for i, item in ipairs(toRemove) do
-		table.insert(removal, getPlan(table.unpack(item)))
 		
-	end
-	if targetIsGhost and #removal > 0 then
-		target.removal_plan = removal
-	end
-	if #missing > 0 then
-		-- fill from missing to request as long as there are free slots avaliable	
-		for _idx = 1, #missing, 1 do
-			local currentItem = missing[_idx];
-			table.insert(request, getPlan(table.unpack(currentItem)))
+		local request = {}
+		if #missing > 0 then
+			-- fill from missing to request as long as there are free slots avaliable	
+			for _idx = 1, #missing, 1 do
+				table.insert(request, getPlan(table.unpack(missing[_idx])))
+			end
+			
+			if targetIsGhost then
+				target.insert_plan = request
+			end
 		end
 		
-		if targetIsGhost then
-			target.insert_plan = request
+		if not targetIsGhost then
+			local removal = {} 
+			for i, item in ipairs(toRemove) do
+				table.insert(removal, getPlan(table.unpack(item)))
+			end
+			
+			if #request > 0 or #removal > 0 then
+				target.surface.create_entity({
+					name = "item-request-proxy",
+					position = target.position,
+					force = player.force,
+					target = target,
+					modules = request,
+					removal_plan = removal,
+					raise_built = true
+				})
+			end
 		end
-	end
-	
-	if not targetIsGhost and (#request > 0 or #removal > 0) then
-		target.surface.create_entity({
-			name = "item-request-proxy",
-			position = target.position,
-			force = player.force,
-			target = target,
-			modules = request,
-			removal_plan = removal,
-			raise_built = true
-		})
 	end
   end
 )
