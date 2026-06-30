@@ -1,5 +1,11 @@
 # CopyPasteModules ChangeLog
 
+## Factorio version 2.1
+
+### 0.2.1 (2026-06-30)
+Changes:
+* Updated to Factorio 2.1
+
 ## Factorio version 2.0
 
 ### 0.2.0 (2024-10-30)
